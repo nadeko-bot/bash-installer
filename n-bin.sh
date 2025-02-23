@@ -279,7 +279,7 @@ display_menu() {
     echo "3. Add Token"
     echo "4. Install music dependencies"
     echo "5. Exit"
-    if [[ ! $MIGRATED -eq 1 ]]; then
+    if [[ ! $MIGRATED -eq 1 && -d "nadekobot/output/data" ]]; then
         echo "6. Migrate v5 from-source version"
     fi
     echo -n "${CYAN}Enter your choice:${NC} "
@@ -304,8 +304,8 @@ while true; do
         exit 0
         ;;
     6)
-        if [[ ! $MIGRATED -eq 1 ]]; then
-            echo "${YELLOW}WARNING: You need to migrate from v5 first!${NC}" >&2
+        if [[ $MIGRATED -eq 1 || ! -d "nadekobot/output/data" ]]; then
+            echo "${YELLOW}WARNING: Nothing to migrate. You must have a v5 nadekobot/output folder!${NC}" >&2
             break
         fi
         migrate_from_v5
