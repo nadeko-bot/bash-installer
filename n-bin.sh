@@ -82,19 +82,13 @@ install_bot() {
     local arch
     arch=$(get_arch)
     local output="nadeko-new"
-
     local tar_url="https://github.com/nadeko-bot/nadekobot/releases/download/${version}/nadeko-${arch}.tar.gz"
-    if [[ $arch == "unsupported" ]]; then
-        echo "${RED}ERROR: Unsupported architecture${NC}" >&2
-        return 1
-    fi
+
+    [[ $arch == "unsupported" ]] && { echo "${RED}ERROR: Unsupported architecture${NC}" >&2; return 1; }
 
     echo "${BLUE}Downloading '${version}' for '${arch}'...${NC}"
 
-    if [[ -d $output ]]; then
-        rm -r ./$output
-    fi
-
+    [[ -d $output ]] && rm -r ./$output
     mkdir ./$output
 
     if ! curl -L "$tar_url" | tar -xzf - -C ./$output --strip-components=1; then
@@ -103,27 +97,26 @@ install_bot() {
         return 1
     fi
 
-
-    if [[ ! -d $BIN_DIR ]]; then
-        echo "${BLUE}NadekoBot not installed. Installing for the first time.${NC}"
-    else
+    if [[ -d $BIN_DIR ]]; then
         backup_bot
         mv "$BIN_DIR" "${BIN_DIR}-old"
+    else
+        echo "${BLUE}NadekoBot not installed. Installing for the first time.${NC}"
     fi
 
     mv ./$output $BIN_DIR
 
     if [[ -d "${BIN_DIR}-old" ]]; then
         echo "${BLUE}Copying over data folder...${NC}"
-        if [[ -d "${BIN_DIR}-old/data/" ]]; then
-            cp -rf "${BIN_DIR}-old/data/"* "$BIN_DIR/data/"
-        fi
-        rm -r "${BIN_DIR}-old"
+        [[ -d "${BIN_DIR}-old/data/" ]] && cp -rf "${BIN_DIR}-old/data/"* "$BIN_DIR/data/"
     fi
 
     chmod +x "${BIN_DIR}/${BOT_EXECUTABLE}"
-    
     echo "${GREEN}Installation complete!${NC}"
+
+    # Clean up any leftover folders
+    [[ -d $output ]] && rm -r ./$output
+    [[ -d "${BIN_DIR}-old" ]] && rm -r "${BIN_DIR}-old"
 }
 
 # TODO: Somehow get the bot version, and
@@ -198,10 +191,9 @@ run_bot() {
         cp -f "$CREDS_EXAMPLE_FILE" "$CREDS_FILE"
     fi
 
-    ## Ensure that the token is set in the creds file
-    ## Or check if env var bot_token is set
-    if [[ ! -f "$CREDS_FILE" ]] && [[ ! -z "${bot_token}" ]]; then
-        echo "${YELLOW}WARNING: 'token' is not set in '$CREDS_FILE'. Please add your token and try again.${NC}" >&2
+    ## Ensure that the token is set in the creds file or check if env var bot_token is set
+    if ! is_token_set && [[ -z "${bot_token}" ]]; then
+        echo "${RED}ERROR: Bot token not set. Please set it in the credentials file or as an environment variable.${NC}" >&2
         return 1
     fi
 
