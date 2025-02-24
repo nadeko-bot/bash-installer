@@ -129,8 +129,7 @@ install_submenu() {
     local IFS='.'
 
     if [[ -d $BIN_DIR ]]; then
-        cur_version=$("./$BIN_DIR/$BOT_EXECUTABLE" --version)
-        # Place each dot-separated version number into separate variables.
+        cur_version=$(./"$BIN_DIR"/"$BOT_EXECUTABLE" --version)
         read -r cur_major cur_minor cur_patch _ <<< "$cur_version"
     fi
 
