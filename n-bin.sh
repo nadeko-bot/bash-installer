@@ -213,19 +213,16 @@ install_submenu() {
                 if [[ $status == "older" ]]; then
                     echo -n "${YELLOW}Downgrading can result in data loss. "
                     read -r -n 1 -p "Are you sure you want to continue? [y/N]: ${NC}" choice
-                    echo
-                    [[ ! $choice =~ ^[Yy]$ ]] && break
                 elif [[ $status == "newer" ]]; then
                     echo -n "${CYAN}You are about update to a newer version. "
                     read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
-                    echo
-                    [[ ! $choice =~ ^[Yy]$ ]] && break
                 elif [[ $status == "equal" ]]; then
                     echo -n "${CYAN}You are about to reinstall the same version. "
                     read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
-                    echo
-                    [[ ! $choice =~ ^[Yy]$ ]] && break
                 fi
+
+                echo
+                [[ ! $choice =~ ^[Yy]$ ]] && break
             fi
 
             install_bot "$selected_version"
