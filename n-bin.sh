@@ -172,7 +172,6 @@ install_submenu() {
     local current_version
     local IFS='.'
 
-    # Get the current version if it exists.
     if [[ -d $BIN_DIR ]]; then
         current_version=$(./"$BIN_DIR"/"$BOT_EXECUTABLE" --version)
     fi
