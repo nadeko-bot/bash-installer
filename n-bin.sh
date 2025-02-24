@@ -120,57 +120,122 @@ install_bot() {
 }
 
 ####
-# Display a list of available versions, and prompt the user to select one to install.
-install_submenu() {
-    local versions
-    local cur_version
-    local cur_major cur_minor cur_patch _
-    local colored_versions
+# Compare two version strings and determine if one is newer, older, or the same as the
+# other. This is done by splitting the version strings into parts and comparing each
+# part, starting from the major number to the patch number.
+#
+# PARAMETERS:
+#   - $1: version_a (Required)
+#       - The version that will be compared.
+#   - $2: version_b (Required)
+#       - The version to compare against.
+#
+# RETURNS:
+#   - newer: If version_a is newer than version_b.
+#   - older: If version_a is older than version_b.
+#   - equal: If version_a is the same as version_b.
+compare_versions() {
+    local version_a="$1"
+    local version_a_major version_a_minor version_a_patch
+    local version_b="$2"
+    local version_b_major version_b_minor version_b_patch
+    local _  # Placeholder for unused variable (build number).
     local IFS='.'
 
+    read -r version_a_major version_a_minor version_a_patch _ <<<"$version_a"
+    read -r version_b_major version_b_minor version_b_patch _ <<<"$version_b"
+
+    if (( version_a_major > version_b_major )); then
+        echo "newer"
+    elif (( version_a_major < version_b_major )); then
+        echo "older"
+    elif (( version_a_minor > version_b_minor )); then
+        echo "newer"
+    elif (( version_a_minor < version_b_minor )); then
+        echo "older"
+    elif (( version_a_patch > version_b_patch )); then
+        echo "newer"
+    elif (( version_a_patch < version_b_patch )); then
+        echo "older"
+    else
+        echo "equal"
+    fi
+}
+
+####
+# Display a list of available versions and prompt the user to select one to install.
+install_submenu() {
+    local -a available_versions
+    local -a display_versions
+    local -A cmp_map
+    local cmp_result
+    local current_version
+    local IFS='.'
+
+    # Get the current version if it exists.
     if [[ -d $BIN_DIR ]]; then
-        cur_version=$(./"$BIN_DIR"/"$BOT_EXECUTABLE" --version)
-        read -r cur_major cur_minor cur_patch _ <<< "$cur_version"
+        current_version=$(./"$BIN_DIR"/"$BOT_EXECUTABLE" --version)
     fi
 
-    # Get versions from /refs/tags github endpoint.
-    mapfile -t versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
+    # Retrieve versions from the GitHub tags endpoint.
+    mapfile -t available_versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
 
-    ## Colorize the versions based on the current version.
-    for ver in "${versions[@]}"; do
-        read -r major minor patch <<< "$ver"
+    # Append some additional versions for testing.
+    available_versions+=( "6.7.0" "5.8.0" "5.8.3" "5.8.4" "6.0.1" "6.0.2" )
 
-        if ((major < cur_major)); then
-            colored_versions+=("${RED}$ver${NC}")
-        elif ((major > cur_major)); then
-            colored_versions+=("${GREEN}$ver${NC}")
-        elif ((minor < cur_minor)); then
-            colored_versions+=("${RED}$ver${NC}")
-        elif ((minor > cur_minor)); then
-            colored_versions+=("${GREEN}$ver${NC}")
-        elif ((patch < cur_patch)); then
-            colored_versions+=("${RED}$ver${NC}")
-        elif ((patch > cur_patch)); then
-            colored_versions+=("${GREEN}$ver${NC}")
+    ## Colorize each version based on its comparison to the current version.
+    for ver in "${available_versions[@]}"; do
+        if [[ -n $current_version ]]; then
+            cmp_result=$(compare_versions "$ver" "$current_version")
+            cmp_map["$ver"]=$cmp_result  # Save the comparison results for later use.
+
+            if [[ $cmp_result == "older" ]]; then
+                display_versions+=("${RED}$ver${NC}")
+            elif [[ $cmp_result == "newer" ]]; then
+                display_versions+=("${GREEN}$ver${NC}")
+            else
+                display_versions+=("${BLUE}$ver${NC}")
+            fi
         else
-            colored_versions+=("${BLUE}$ver${NC}")
+            display_versions+=("$ver")
         fi
     done
 
-    echo "${CYAN}Select version to install:${NC}"
-    select chosen_version in "${colored_versions[@]}"; do
-        ## Retrieve the selected version that doesn't contain color codes.
-        local selected_index=$((REPLY - 1))
-        local actual_version="${versions[$selected_index]}"
+    echo -e "${CYAN}Select version to install:${NC}"
+    select choice in "${display_versions[@]}"; do
+        local choice_index=$((REPLY - 1))
+        local selected_version="${available_versions[$choice_index]}"
 
-        if [[ -n $actual_version ]]; then
-            install_bot "$actual_version"
+        if [[ -n $selected_version ]]; then
+            if [[ -n $current_version ]]; then
+                local status=${cmp_map["$selected_version"]}
+
+                if [[ $status == "older" ]]; then
+                    echo -n "${YELLOW}Downgrading can result in data loss. "
+                    read -r -n 1 -p "Are you sure you want to continue? [y/N]: ${NC}" choice
+                    echo
+                    [[ ! $choice =~ ^[Yy]$ ]] && break
+                elif [[ $status == "newer" ]]; then
+                    echo -n "${CYAN}You are about update to a newer version. "
+                    read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
+                    echo
+                    [[ ! $choice =~ ^[Yy]$ ]] && break
+                elif [[ $status == "equal" ]]; then
+                    echo -n "${CYAN}You are about to reinstall the same version. "
+                    read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
+                    echo
+                    [[ ! $choice =~ ^[Yy]$ ]] && break
+                fi
+            fi
+
+            install_bot "$selected_version"
             break
         else
-            echo "${RED}ERROR: Invalid selection${NC}"
+            echo -e "${RED}ERROR: Invalid selection${NC}"
         fi
     done
 }
+
 
 ####
 # Determines whether the 'token' field in the credentials file is set.
