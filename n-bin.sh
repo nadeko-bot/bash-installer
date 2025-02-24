@@ -180,9 +180,6 @@ install_submenu() {
     # Retrieve versions from the GitHub tags endpoint.
     mapfile -t available_versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
 
-    # Append some additional versions for testing.
-    available_versions+=( "6.7.0" "5.8.0" "5.8.3" "5.8.4" "6.0.1" "6.0.2" )
-
     ## Colorize each version based on its comparison to the current version.
     for ver in "${available_versions[@]}"; do
         if [[ -n $current_version ]]; then
