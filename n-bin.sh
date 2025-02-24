@@ -193,7 +193,7 @@ install_submenu() {
                 display_versions+=("${BLUE}$ver${NC}")
             else
                 echo "${RED}ERROR: INTERNAL: Invalid comparison result${NC}" >&2
-                break
+                exit 1
             fi
         else
             display_versions+=("$ver")
@@ -220,7 +220,7 @@ install_submenu() {
                     read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
                 else
                     echo "${RED}ERROR: INTERNAL: Invalid comparison result${NC}" >&2
-                    break
+                    exit 1
                 fi
 
                 echo
