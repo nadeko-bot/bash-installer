@@ -123,24 +123,21 @@ install_bot() {
 # Display a list of available versions, and prompt the user to select one to install.
 install_submenu() {
     local versions
-    local cur_version; cur_version=$("./$BIN_DIR/$BOT_EXECUTABLE" --version)
+    local cur_version
     local cur_major cur_minor cur_patch _
     local colored_versions
     local IFS='.'
 
-    # Place each dot-separated version number into separate variables.
-    read -r cur_major cur_minor cur_patch _ <<< "$cur_version"
+    if [[ -d $BIN_DIR ]]; then
+        cur_version=$("./$BIN_DIR/$BOT_EXECUTABLE" --version)
+        # Place each dot-separated version number into separate variables.
+        read -r cur_major cur_minor cur_patch _ <<< "$cur_version"
+    fi
+
     # Get versions from /refs/tags github endpoint.
     mapfile -t versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
 
-    ## Add different versions for testing purposes
-    versions+=("6.7.0")
-    versions+=("5.8.0")
-    versions+=("5.8.3")
-    versions+=("5.8.4")
-    versions+=("6.0.1")
-    versions+=("6.0.2")
-
+    ## Colorize the versions based on the current version.
     for ver in "${versions[@]}"; do
         read -r major minor patch <<< "$ver"
 
@@ -163,8 +160,10 @@ install_submenu() {
 
     echo "${CYAN}Select version to install:${NC}"
     select chosen_version in "${colored_versions[@]}"; do
-        local idx=$((REPLY - 1))
-        local actual_version="${versions[$idx]}"
+        ## Retrieve the selected version that doesn't contain color codes.
+        local selected_index=$((REPLY - 1))
+        local actual_version="${versions[$selected_index]}"
+
         if [[ -n $actual_version ]]; then
             install_bot "$actual_version"
             break
