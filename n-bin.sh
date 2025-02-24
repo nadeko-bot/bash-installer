@@ -230,7 +230,6 @@ install_submenu() {
     done
 }
 
-
 ####
 # Determines whether the 'token' field in the credentials file is set.
 #
