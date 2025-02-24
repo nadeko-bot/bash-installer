@@ -119,24 +119,54 @@ install_bot() {
     [[ -d "${BIN_DIR}-old" ]] && rm -r "${BIN_DIR}-old"
 }
 
-# TODO: Somehow get the bot version, and
-#       paint available versions with color
-#       RED: older (downgrade), not recommended
-#       GREEN: newer (upgrade)
-#       BLUE: same (reinstall)
-
 ####
 # Display a list of available versions, and prompt the user to select one to install.
 install_submenu() {
     local versions
+    local cur_version; cur_version=$("./$BIN_DIR/$BOT_EXECUTABLE" --version)
+    local cur_major cur_minor cur_patch _
+    local colored_versions
+    local IFS='.'
 
-    # get versions from /refs/tags github endpoint
+    # Place each dot-separated version number into separate variables.
+    read -r cur_major cur_minor cur_patch _ <<< "$cur_version"
+    # Get versions from /refs/tags github endpoint.
     mapfile -t versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
 
+    ## Add different versions for testing purposes
+    versions+=("6.7.0")
+    versions+=("5.8.0")
+    versions+=("5.8.3")
+    versions+=("5.8.4")
+    versions+=("6.0.1")
+    versions+=("6.0.2")
+
+    for ver in "${versions[@]}"; do
+        read -r major minor patch <<< "$ver"
+
+        if ((major < cur_major)); then
+            colored_versions+=("${RED}$ver${NC}")
+        elif ((major > cur_major)); then
+            colored_versions+=("${GREEN}$ver${NC}")
+        elif ((minor < cur_minor)); then
+            colored_versions+=("${RED}$ver${NC}")
+        elif ((minor > cur_minor)); then
+            colored_versions+=("${GREEN}$ver${NC}")
+        elif ((patch < cur_patch)); then
+            colored_versions+=("${RED}$ver${NC}")
+        elif ((patch > cur_patch)); then
+            colored_versions+=("${GREEN}$ver${NC}")
+        else
+            colored_versions+=("${BLUE}$ver${NC}")
+        fi
+    done
+
     echo "${CYAN}Select version to install:${NC}"
-    select version in "${versions[@]}"; do
-        if [[ -n $version ]]; then
-            install_bot "$version"
+    select chosen_version in "${colored_versions[@]}"; do
+        local idx=$((REPLY - 1))
+        local actual_version="${versions[$idx]}"
+        if [[ -n $actual_version ]]; then
+            install_bot "$actual_version"
             break
         else
             echo "${RED}ERROR: Invalid selection${NC}"
