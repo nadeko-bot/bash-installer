@@ -228,7 +228,7 @@ install_submenu() {
             install_bot "$selected_version"
             break
         else
-            echo -e "${RED}ERROR: Invalid selection${NC}"
+            echo "${RED}ERROR: Invalid selection${NC}"
         fi
     done
 }
