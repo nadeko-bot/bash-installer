@@ -189,8 +189,11 @@ install_submenu() {
                 display_versions+=("${RED}$ver${NC}")
             elif [[ $cmp_result == "newer" ]]; then
                 display_versions+=("${GREEN}$ver${NC}")
-            else
+            elif [[ $cmp_result == "equal" ]]; then
                 display_versions+=("${BLUE}$ver${NC}")
+            else
+                echo "${RED}ERROR: INTERNAL: Invalid comparison result${NC}" >&2
+                break
             fi
         else
             display_versions+=("$ver")
@@ -215,6 +218,9 @@ install_submenu() {
                 elif [[ $status == "equal" ]]; then
                     echo -n "${CYAN}You are about to reinstall the same version. "
                     read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
+                else
+                    echo "${RED}ERROR: INTERNAL: Invalid comparison result${NC}" >&2
+                    break
                 fi
 
                 echo
