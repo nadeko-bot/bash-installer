@@ -173,7 +173,7 @@ install_submenu() {
 
     if [[ -f $BIN_DIR/$BOT_EXECUTABLE ]]; then
         current_version=$(timeout 5s ./"$BIN_DIR"/"$BOT_EXECUTABLE" --version)
-        [[ $? -ne 0 ]] && current_version="unknown"
+        [[ $? -ne 0 ]] && current_version=""
     fi
 
     # Retrieve versions from the GitHub tags endpoint.
