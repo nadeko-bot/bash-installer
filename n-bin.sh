@@ -167,8 +167,8 @@ install_submenu() {
     local -a available_versions
     local -a display_versions
     local -A cmp_map
-    local cmp_result=""
-    local current_version=""
+    local cmp_result
+    local current_version
     local IFS='.'
 
     if [[ -f $BIN_DIR/$BOT_EXECUTABLE ]]; then
