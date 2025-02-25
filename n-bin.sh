@@ -139,11 +139,10 @@ compare_versions() {
     local version_a_major version_a_minor version_a_patch
     local version_b="$2"
     local version_b_major version_b_minor version_b_patch
-    local _  # Placeholder for unused variable (build number).
     local IFS='.'
 
-    read -r version_a_major version_a_minor version_a_patch _ <<<"$version_a"
-    read -r version_b_major version_b_minor version_b_patch _ <<<"$version_b"
+    read -r version_a_major version_a_minor version_a_patch <<< "$version_a"
+    read -r version_b_major version_b_minor version_b_patch <<< "$version_b"
 
     if (( version_a_major > version_b_major )); then
         echo "newer"
@@ -168,11 +167,11 @@ install_submenu() {
     local -a available_versions
     local -a display_versions
     local -A cmp_map
-    local cmp_result
-    local current_version
+    local cmp_result=""
+    local current_version=""
     local IFS='.'
 
-    if [[ -d $BIN_DIR ]]; then
+    if [[ -f $BIN_DIR/$BOT_EXECUTABLE ]]; then
         current_version=$(./"$BIN_DIR"/"$BOT_EXECUTABLE" --version)
     fi
 
@@ -181,7 +180,7 @@ install_submenu() {
 
     ## Colorize each version based on its comparison to the current version.
     for ver in "${available_versions[@]}"; do
-        if [[ -n $current_version ]]; then
+        if [[ -n $current_version && $current_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             cmp_result=$(compare_versions "$ver" "$current_version")
             cmp_map["$ver"]=$cmp_result  # Save the comparison results for later use.
 
@@ -202,6 +201,7 @@ install_submenu() {
 
     echo -e "${CYAN}Select version to install:${NC}"
     select choice in "${display_versions[@]}"; do
+        ## Ensure the non-color-coded version is selected/used.
         local choice_index=$((REPLY - 1))
         local selected_version="${available_versions[$choice_index]}"
 
