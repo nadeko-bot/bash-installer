@@ -119,24 +119,116 @@ install_bot() {
     [[ -d "${BIN_DIR}-old" ]] && rm -r "${BIN_DIR}-old"
 }
 
-# TODO: Somehow get the bot version, and
-#       paint available versions with color
-#       RED: older (downgrade), not recommended
-#       GREEN: newer (upgrade)
-#       BLUE: same (reinstall)
+####
+# Compare two version strings and determine if one is newer, older, or the same as the
+# other. This is done by splitting the version strings into parts and comparing each
+# part, starting from the major number to the patch number.
+#
+# PARAMETERS:
+#   - $1: version_a (Required)
+#       - The version that will be compared.
+#   - $2: version_b (Required)
+#       - The version to compare against.
+#
+# RETURNS:
+#   - newer: If version_a is newer than version_b.
+#   - older: If version_a is older than version_b.
+#   - equal: If version_a is the same as version_b.
+compare_versions() {
+    local version_a="$1"
+    local version_a_major version_a_minor version_a_patch
+    local version_b="$2"
+    local version_b_major version_b_minor version_b_patch
+    local IFS='.'
+
+    read -r version_a_major version_a_minor version_a_patch <<< "$version_a"
+    read -r version_b_major version_b_minor version_b_patch <<< "$version_b"
+
+    if (( version_a_major > version_b_major )); then
+        echo "newer"
+    elif (( version_a_major < version_b_major )); then
+        echo "older"
+    elif (( version_a_minor > version_b_minor )); then
+        echo "newer"
+    elif (( version_a_minor < version_b_minor )); then
+        echo "older"
+    elif (( version_a_patch > version_b_patch )); then
+        echo "newer"
+    elif (( version_a_patch < version_b_patch )); then
+        echo "older"
+    else
+        echo "equal"
+    fi
+}
 
 ####
-# Display a list of available versions, and prompt the user to select one to install.
+# Display a list of available versions and prompt the user to select one to install.
 install_submenu() {
-    local versions
+    local -a available_versions
+    local -a display_versions
+    local -A cmp_map
+    local cmp_result
+    local current_version
+    local IFS='.'
 
-    # get versions from /refs/tags github endpoint
-    mapfile -t versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
+    if [[ -f $BIN_DIR/$BOT_EXECUTABLE ]]; then
+        current_version=$(timeout 5s ./"$BIN_DIR"/"$BOT_EXECUTABLE" --version)
+        [[ $? -ne 0 ]] && current_version=""
+    fi
 
-    echo "${CYAN}Select version to install:${NC}"
-    select version in "${versions[@]}"; do
-        if [[ -n $version ]]; then
-            install_bot "$version"
+    # Retrieve versions from the GitHub tags endpoint.
+    mapfile -t available_versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
+
+    ## Colorize each version based on its comparison to the current version.
+    for ver in "${available_versions[@]}"; do
+        if [[ -n $current_version && $current_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            cmp_result=$(compare_versions "$ver" "$current_version")
+            cmp_map["$ver"]=$cmp_result  # Save the comparison results for later use.
+
+            if [[ $cmp_result == "older" ]]; then
+                display_versions+=("${RED}$ver${NC}")
+            elif [[ $cmp_result == "newer" ]]; then
+                display_versions+=("${GREEN}$ver${NC}")
+            elif [[ $cmp_result == "equal" ]]; then
+                display_versions+=("${BLUE}$ver${NC}")
+            else
+                echo "${RED}ERROR: INTERNAL: Invalid comparison result${NC}" >&2
+                exit 1
+            fi
+        else
+            display_versions+=("$ver")
+        fi
+    done
+
+    echo -e "${CYAN}Select version to install:${NC}"
+    select choice in "${display_versions[@]}"; do
+        ## Ensure the non-color-coded version is selected/used.
+        local choice_index=$((REPLY - 1))
+        local selected_version="${available_versions[$choice_index]}"
+
+        if [[ -n $selected_version ]]; then
+            if [[ -n $current_version ]]; then
+                local status=${cmp_map["$selected_version"]}
+
+                if [[ $status == "older" ]]; then
+                    echo -n "${YELLOW}Downgrading can result in data loss. "
+                    read -r -n 1 -p "Are you sure you want to continue? [y/N]: ${NC}" choice
+                elif [[ $status == "newer" ]]; then
+                    echo -n "${CYAN}You are about update to a newer version. "
+                    read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
+                elif [[ $status == "equal" ]]; then
+                    echo -n "${CYAN}You are about to reinstall the same version. "
+                    read -r -n 1 -p "Continue? [y/N]: ${NC}" choice
+                else
+                    echo "${RED}ERROR: INTERNAL: Invalid comparison result${NC}" >&2
+                    exit 1
+                fi
+
+                echo
+                [[ ! $choice =~ ^[Yy]$ ]] && break
+            fi
+
+            install_bot "$selected_version"
             break
         else
             echo "${RED}ERROR: Invalid selection${NC}"
