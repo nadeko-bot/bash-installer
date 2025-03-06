@@ -382,7 +382,7 @@ MIGRATED=1
 while true; do
 
     # check if there is a nadekobot/output/data folder
-    if [ ! -d "nadekobot/output/data" ]; then
+    if [ -d "nadekobot/output/data" ]; then
         MIGRATED=0
     fi
 
