@@ -398,7 +398,7 @@ while true; do
         exit 0
         ;;
     6)
-        if [[ $MIGRATED -eq 0 ]]; then
+        if [[ $MIGRATED -eq 1 ]]; then
             echo "${YELLOW}WARNING: Nothing to migrate. You must have a v5 nadekobot/output folder!${NC}" >&2
             break
         fi
