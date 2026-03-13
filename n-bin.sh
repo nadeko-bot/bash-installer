@@ -108,7 +108,13 @@ install_bot() {
 
     if [[ -d "${BIN_DIR}-old" ]]; then
         echo "${BLUE}Copying over data folder...${NC}"
-        [[ -d "${BIN_DIR}-old/data/" ]] && cp -rf "${BIN_DIR}-old/data/"* "$BIN_DIR/data/"
+        if [[ -d "${BIN_DIR}-old/data/" ]]; then
+            # Preserve native libraries from the new release
+            mv "$BIN_DIR/data/lib" "$BIN_DIR/data/lib.new"
+            cp -rf "${BIN_DIR}-old/data/"* "$BIN_DIR/data/"
+            rm -rf "$BIN_DIR/data/lib"
+            mv "$BIN_DIR/data/lib.new" "$BIN_DIR/data/lib"
+        fi
     fi
 
     chmod +x "${BIN_DIR}/${BOT_EXECUTABLE}"
