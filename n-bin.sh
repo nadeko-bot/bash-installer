@@ -61,7 +61,7 @@ backup_bot() {
         date_now=$(date +%s)
         cp -r $BIN_DIR/data "$BACKUP_DIR/$date_now-data"
 
-        echo "${BLUE}Your current data "
+        echo "${BLUE}Your current data has been backed up.${NC}"
     fi
 }
 
@@ -356,7 +356,10 @@ migrate_from_v5() {
     if [ -d "nadekobot/output/data/" ]; then
         # strings are no longer there, nor do we need them
         rm -rf nadekobot/output/data/strings
+        mv nadeko/data/lib nadeko/data/lib.new
         cp -rf nadekobot/output/data/* nadeko/data/
+        rm -rf nadeko/data/lib
+        mv nadeko/data/lib.new nadeko/data/lib
 
         # move the data folder to avoid double migration
         mv nadekobot/output/data nadekobot/output/data.old
