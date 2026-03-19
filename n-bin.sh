@@ -183,7 +183,7 @@ install_submenu() {
     fi
 
     # Retrieve versions from the GitHub tags endpoint.
-    mapfile -t available_versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+')
+    mapfile -t available_versions < <(curl -s https://api.github.com/repos/nadeko-bot/nadekobot/git/refs/tags | grep -oP '"ref": "refs/tags/\K[^"]+' | sort -V -r | head -n 10)
 
     ## Colorize each version based on its comparison to the current version.
     for ver in "${available_versions[@]}"; do
@@ -205,6 +205,8 @@ install_submenu() {
             display_versions+=("$ver")
         fi
     done
+
+    display_versions[0]="${display_versions[0]} (latest)"
 
     echo -e "${CYAN}Select version to install:${NC}"
     select choice in "${display_versions[@]}"; do
