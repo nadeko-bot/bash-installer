@@ -79,30 +79,46 @@ install_yt_dlp() {
         yt-dlp -U || {
             echo "${RED}Failed to update 'yt-dlp'${NC}" >&2
         }
-        return
+    else
+        # get correct yt-dlp based on os and arch
+        if [[ "$DISTRO" == "darwin" ]]; then
+            local yt_dlp_url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos"
+        else
+            local yt_dlp_url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
+            case $ARCH in
+                x64) ;;
+                arm64) yt_dlp_url="${yt_dlp_url}_aarch64" ;;
+                arm32) yt_dlp_url="${yt_dlp_url}_armv7l" ;;
+                *) echo "${RED}Unsupported architecture: $ARCH${NC}" >&2; return 1 ;;
+            esac
+        fi
+
+        [[ ! -d "$HOME/.local/bin" ]] && mkdir -p "$HOME/.local/bin"
+
+        if [[ ! -f $YT_DLP_PATH ]]; then
+            echo "${BLUE}Installing 'yt-dlp'...${NC}"
+            curl -L "$yt_dlp_url" -o "$YT_DLP_PATH" || {
+                echo "${RED}Failed to download 'yt-dlp'${NC}" >&2
+                return 1
+            }
+        fi
+
+        echo "${BLUE}Modifying permissions for 'yt-dlp'...${NC}"
+        chmod a+rx "$YT_DLP_PATH"
     fi
 
-    # get correct yt-dlp based on arch
-    local yt_dlp_url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
-    case $ARCH in
-        x64) yt_dlp_url="${yt_dlp_url}" ;;
-        arm64) yt_dlp_url="${yt_dlp_url}_aarch64" ;;
-        arm32) yt_dlp_url="${yt_dlp_url}_armv7l" ;;
-        *) echo "${RED}Unsupported architecture: $ARCH${NC}" >&2; return 1 ;;
-    esac
-
-    [[ ! -d "$HOME/.local/bin" ]] && mkdir -p "$HOME/.local/bin"
-
-    if [[ ! -f $YT_DLP_PATH ]]; then
-        echo "${BLUE}Installing 'yt-dlp'...${NC}"
-        curl -L "$yt_dlp_url" -o "$YT_DLP_PATH" || {
-            echo "${RED}Failed to download 'yt-dlp'${NC}" >&2
+    if command -v deno &>/dev/null || command -v node &>/dev/null || command -v bun &>/dev/null; then
+        echo "${BLUE}A JavaScript runtime is already installed.${NC}"
+    else
+        echo "${BLUE}Installing Deno (required by yt-dlp)...${NC}"
+        curl -fsSL https://deno.land/install.sh | DENO_INSTALL="$HOME/.deno" sh || {
+            echo "${RED}Failed to install Deno${NC}" >&2
             return 1
         }
+        export DENO_INSTALL="$HOME/.deno"
+        export PATH="$DENO_INSTALL/bin:$PATH"
+        echo "${GREEN}Deno installed successfully.${NC}"
     fi
-
-    echo "${BLUE}Modifying permissions for 'yt-dlp'...${NC}"
-    chmod a+rx "$YT_DLP_PATH"
 }
 
 ####
