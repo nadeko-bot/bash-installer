@@ -106,14 +106,28 @@ install_bot() {
 
     mv ./$output $BIN_DIR
 
+    if [[ ! -d $BIN_DIR ]]; then
+        echo "${RED}ERROR: Failed to move new install into place${NC}" >&2
+        if [[ -d "${BIN_DIR}-old" ]]; then
+            mv "${BIN_DIR}-old" "$BIN_DIR"
+            echo "${YELLOW}Rolled back to previous installation.${NC}"
+        fi
+        [[ -d $output ]] && rm -r ./$output
+        return 1
+    fi
+
     if [[ -d "${BIN_DIR}-old" ]]; then
         echo "${BLUE}Copying over data folder...${NC}"
         if [[ -d "${BIN_DIR}-old/data/" ]]; then
             # Preserve native libraries from the new release
-            mv "$BIN_DIR/data/lib" "$BIN_DIR/data/lib.new"
-            cp -rf "${BIN_DIR}-old/data/"* "$BIN_DIR/data/"
-            rm -rf "$BIN_DIR/data/lib"
-            mv "$BIN_DIR/data/lib.new" "$BIN_DIR/data/lib"
+            if ! (mv "$BIN_DIR/data/lib" "$BIN_DIR/data/lib.new" \
+                && cp -rf "${BIN_DIR}-old/data/"* "$BIN_DIR/data/" \
+                && rm -rf "$BIN_DIR/data/lib" \
+                && mv "$BIN_DIR/data/lib.new" "$BIN_DIR/data/lib"); then
+                echo "${RED}ERROR: Failed to copy data from previous installation${NC}" >&2
+                echo "${YELLOW}Your previous data is safe in '${BIN_DIR}-old/data/'.${NC}"
+                echo "${YELLOW}You may need to manually copy it to '${BIN_DIR}/data/'.${NC}"
+            fi
         fi
     fi
 
@@ -336,8 +350,11 @@ edit_creds() {
     fi
 
     # replace the token in the creds file
-    # by finding a line which starts with 'token: ' and replacing it
-    sed -i "s/token: .*/token: \"$token\"/" $CREDS_FILE
+    # uses awk to avoid issues with tokens containing /, &, or \
+    awk -v tok="$token" '{
+        if ($0 ~ /^token: /) print "token: \"" tok "\""
+        else print
+    }' "$CREDS_FILE" > "${CREDS_FILE}.tmp" && mv "${CREDS_FILE}.tmp" "$CREDS_FILE"
 }
 
 migrate_from_v5() {
