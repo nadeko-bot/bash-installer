@@ -1,5 +1,12 @@
 #!/bin/bash
 
+YELLOW="${YELLOW:-$(printf '\033[0;33m')}"
+GREEN="${GREEN:-$(printf '\033[0;32m')}"
+BLUE="${BLUE:-$(printf '\033[0;34m')}"
+CYAN="${CYAN:-$(printf '\033[0;36m')}"
+RED="${RED:-$(printf '\033[1;31m')}"
+NC="${NC:-$(printf '\033[0m')}"
+
 if [ "$EUID" -ne 0 ]; then
   sudo_cmd="sudo "
 fi
@@ -20,8 +27,8 @@ declare -A -r ZYPPER_CMD=(
 )
 
 declare -A -r BREW_CMD=(
-    ["update"]="${sudo_cmd}brew update"
-    ["install"]="${sudo_cmd}brew install"
+    ["update"]="brew update"
+    ["install"]="brew install"
 )
 
 declare -A -r PACMAN_CMD=(
@@ -30,6 +37,11 @@ declare -A -r PACMAN_CMD=(
 )
 
 readonly YT_DLP_PATH="$HOME/.local/bin/yt-dlp"
+
+unsupported() {
+    echo "${RED}Unsupported version: $DISTRO $VER${NC}" >&2
+    exit 1
+}
 
 ####
 # Identify the system's distribution, version, and architecture.

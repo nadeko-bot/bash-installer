@@ -285,7 +285,7 @@ run_bot() {
     ## Create the creds file if it doesn't exist.
     if [[ ! -f $CREDS_FILE ]]; then
         if [[ ! -f $CREDS_EXAMPLE_FILE ]]; then
-            echo "${RED}ERROR: 'creds_xample.yml'not found. Make sure the bot is installed${NC}" >&2
+            echo "${RED}ERROR: 'creds_example.yml' not found. Make sure the bot is installed${NC}" >&2
             return 1
         fi
         cp -f "$CREDS_EXAMPLE_FILE" "$CREDS_FILE"
@@ -411,9 +411,9 @@ while true; do
     6)
         if [[ $MIGRATED -eq 1 ]]; then
             echo "${YELLOW}WARNING: Nothing to migrate. You must have a v5 nadekobot/output folder!${NC}" >&2
-            break
+        else
+            migrate_from_v5
         fi
-        migrate_from_v5
         ;;
     *) echo "${RED}ERROR: Invalid option${NC}" ;;
     esac
